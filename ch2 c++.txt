@@ -1,0 +1,172 @@
+#include <fstream>
+#include <cstring>
+
+using namespace std;
+
+ifstream f ("a.in");
+ofstream g ("a.out");
+
+int coded[ 200 ], nrcmds, nr_var, pos, posInWhile, while_end[ 200 ];
+string varS, cmd, parse;
+
+void Decode( int );
+void Read();
+void ApplyWhile( int, int, int );
+
+struct elem
+{
+    string name;
+    int val;
+}var[ 100 ];
+
+
+int Search( string name )
+{
+    for( int i = 1; i <= nr_var; i ++ )
+    {
+        if( var[ i ] . name == name )
+            return i;
+    }
+
+    nr_var++;
+    var[ nr_var ] . name = name;
+    var[ nr_var ] . val = 0;
+
+    return nr_var;
+}
+
+void Read()
+{
+    int pos = 0, b = 0;
+
+    f >> cmd;
+
+    if( cmd == "end;" )
+        b = 1;
+    else f >> varS;
+
+    if( cmd != "while" && !b )
+        varS.erase( varS.end() - 1 );
+
+    if( !b )
+        pos = Search( varS );
+
+    if( cmd == "clear" )
+    {
+        coded[ ++nrcmds ] = 0;
+        coded[ ++nrcmds ] = pos;
+    }
+
+    if( cmd == "incr" )
+    {
+        coded[ ++nrcmds ] = 1;
+        coded[ ++nrcmds ] = pos;
+    }
+
+    if( cmd == "decr" )
+    {
+        coded[ ++nrcmds ] = -1;
+        coded[ ++nrcmds ] = pos;
+    }
+
+    if( cmd == "while" )
+    {
+        for( int i = 1; i <=3 ; i++ )
+            f >> parse;
+
+        coded[ ++nrcmds ] = 2;
+        coded[ ++nrcmds ] = pos;
+    }
+
+    if( cmd == "end;" )
+    {
+        coded[ ++nrcmds ] = 3;
+        coded[ ++nrcmds ] = -2;
+    }
+}
+
+void While_length()
+{
+    int cnt = 0;
+
+    for( int i = 1; i <= nrcmds; i += 2 )
+    {
+        cnt = 0;
+
+        if ( coded[ i ] == 2 )
+        {
+            cnt++;
+
+            for( int j = i + 2; j <= nrcmds; j += 2 )
+            {
+                if( coded[ j ] == 2 )
+                    cnt++;
+                else if ( coded[ j ] == 3 )
+                    cnt--;
+
+                if( cnt == 0 )
+                {
+                    while_end[ i ] = j;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void Solve()
+{
+    for( pos = 1; pos <= nrcmds; pos += 2 )
+    {
+        Decode( pos );
+
+        if( coded[ pos ] == 2 )
+            pos = while_end[ pos ];
+    }
+}
+
+void Decode( int i )
+{
+    if( coded[ i ] == 0 )
+        var[ coded [ i + 1 ] ] . val = 0;
+
+    else if( coded[ i ] == 2 )
+        ApplyWhile( coded[ i + 1 ], i + 2, while_end[ i ] );
+
+    else if( coded[ i ] != 3 )
+        var[ coded[ i + 1 ] ] . val += coded[ i ];
+}
+
+void ApplyWhile( int posVar, int posStart, int posFinish )
+{
+    while( var[ posVar ] . val != 0 )
+    {
+        for( int i = posStart; i <= posFinish - 1; i += 2 )
+        {
+            Decode( i );
+
+            if( coded[ i ] == 2 )
+                i = while_end[ i ];
+        }
+    }
+}
+
+void Write()
+{
+    for( int i = 1; i <= nr_var; i ++ )
+        g << var[ i ] . name << " " << var[ i ] . val << "\n";
+}
+
+int main()
+{
+    while( !f.eof() )
+        Read();
+
+    While_length();
+
+    Solve();
+
+    nrcmds--;
+
+    Write();
+}
